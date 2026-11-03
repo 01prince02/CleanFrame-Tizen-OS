@@ -34,8 +34,8 @@ This is my first attempt at building something like this with AI assistance. It 
 
 If you're interested in Samsung Tizen TV development, feel free to follow the project and share suggestions or feedback.
 
-**Thanks for checking out my project!**
+**Thanks for checking out my project**
 
----
+
 
 *Made with curiosity, AI assistance and a lot of experimentation.* ❤️
