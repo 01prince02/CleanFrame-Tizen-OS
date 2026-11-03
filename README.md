@@ -1,41 +1,61 @@
-# CleanFrame-Tizen 🚀
+# CleanFrame Tizen
 
-### Bringing a new home screen experience to Samsung Tizen TVs.
+A personal, remote-friendly home screen for Samsung Tizen TVs, adapted from the open-source CleanFrame project.
 
-Welcome to CleanFrame-Tizen!
+CleanFrame brings a focused app dock, customizable home layout, photographic wallpapers and settings into a lightweight Tizen web application. Its glass surfaces use bundled, pre-rendered artwork so the TV does not have to calculate large blur effects during remote navigation.
 
-This is my first project built with the help of AI, and it's an experimental attempt to bring the CleanFrame experience to Samsung Tizen Smart TVs.
+This project is independent and is not affiliated with Samsung or any streaming service. It is experimental software. The manifest targets Tizen 5.0 and later, but that minimum does not guarantee every feature works on every model, region or firmware. Verify compatibility on your own TV.
 
-I'm still learning, exploring and improving things along the way. This project is a work in progress, and I know there is plenty of room for improvement.
+## Features in the source
 
-### 🎯 My Goals
-- Create a clean and modern home screen experience.
-- Improve the user interface and overall performance.
-- Add better app icons and application support.
-- Improve remote control navigation.
-- Explore more customization options.
-- Make the experience smoother and more reliable.
+- List and dock home layouts with remote-friendly focus navigation.
+- Installed-app discovery and app launching through Tizen APIs.
+- Editable apps on Home, Favorites and Recently Used sections.
+- Wallpaper selection, appearance controls, and persistent app preferences.
+- Settings for layout, typography, focus materials, animation, date/time, screensaver and Samsung actions where supported.
+- An in-app idle screen; it does not replace Samsung's system screensaver or Smart Hub.
+- Browser preview and offline source checks.
 
-### 🛠️ Development Status
+The browser preview cannot verify installed TV apps, Samsung system destinations, remote key delivery, the TV compositor, or physical-TV performance. Device-specific behavior is documented separately and must not be inferred from a browser result.
 
-This project is currently under development. Some features may be incomplete, unstable or not working as expected.
+## Preview the interface
 
-### 🤖 Built with AI Assistance
+Development prerequisites are Node.js 22.13 or later in the 22.x line, or Node.js 24 or later, and Python 3.10 or later. Install dependencies, then run:
 
-AI tools have helped me explore ideas, write code, troubleshoot issues and experiment with new features. I'm learning through this project and working to understand and improve the code.
+    npm ci
+    npm run dev:public
 
-### 📌 Future Plans
+Open the local preview address printed by `npm run dev` in a browser. Use the keyboard arrows, Enter and Escape, or click the preview controls. Actions requiring a TV report that limitation rather than simulating a successful launch.
 
-I plan to continuously improve this project, fix bugs, add new features and release updates as development progresses.
+The public preview uses the fonts bundled under their respective open font licenses. Proprietary font binaries and machine-specific configuration are excluded.
 
-### ❤️ A Note from the Developer
+## Checks
 
-This is my first attempt at building something like this with AI assistance. It may not be perfect right now, but I'll keep learning, experimenting and making it better.
+The project documents these offline checks:
 
-If you're interested in Samsung Tizen TV development, feel free to follow the project and share suggestions or feedback.
+    npm run check
+    npm run check:tools
+    npm run check:browser
+    npm run check:public
 
-**Thanks for checking out my project**
+The source and browser checks do not contact a TV. See docs/testing.md for coverage and limits. A passing browser check is not evidence of physical-TV compatibility.
 
+## Samsung TV setup
 
+Building a personal installable widget requires the official Samsung TV SDK, a Samsung TV certificate profile generated through Samsung's supported certificate tools, and a package identity selected locally in .local/signing.json. The distributor certificate must be valid for the target TV. Never commit certificates, passwords, DUIDs, device addresses or signed WGT packages.
 
-*Made with curiosity, AI assistance and a lot of experimentation.* ❤️
+Read docs/development.md and docs/agent-tv-setup-guide.md before using device tools. The documented tv:info, tv:install and tv:launch commands contact a connected TV. Verify SDB connectivity and device state first, review the exact package identity and signatures, and obtain the owner's approval for any install or launch. Do not use this application to replace Smart Hub, change Home/startup assignments, remove system apps, root the TV or modify firmware.
+
+The app manifest declares a Tizen 5.0 installation floor. The exact model, firmware, region, installed streaming app IDs, supported remote keys and Samsung Settings destinations must be checked on each target TV.
+
+## Wallpapers, attribution and license
+
+The original CleanFrame source and documentation are distributed under the MIT License; see LICENSE. Preserve its copyright and permission notice when sharing this derivative. Third-party fonts, photographs and icons retain their separate terms in THIRD_PARTY_NOTICES.md and the asset source records.
+
+Some wallpapers in this personal project were supplied by the project owner. Their original authorship and public redistribution permissions have not been independently established. Confirm rights before publishing or redistributing those image files. The repository's MIT license does not grant rights to third-party assets.
+
+This project contains no ready-to-install signed package. Generate and sign your own package locally with your own certificate profile.
+
+## Contributing
+
+Read CONTRIBUTING.md and AI-GUIDE.md before making changes. Keep device-specific observations separate from assumptions, preserve remote navigation and preference migrations, and do not include private device or signing data in issues or pull requests.

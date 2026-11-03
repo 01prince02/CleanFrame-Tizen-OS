@@ -1,0 +1,229 @@
+[
+  {
+    "id": "misty",
+    "name": "Misty coast",
+    "src": "assets/wallpapers/misty.jpg",
+    "thumb": "assets/wallpapers/misty-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "Ganapathy Kumar",
+    "source": "https://unsplash.com/photos/n4VMQZIkgDg"
+  },
+  {
+    "id": "cove",
+    "name": "Quiet cove",
+    "src": "assets/wallpapers/cove.jpg",
+    "thumb": "assets/wallpapers/cove-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "Joshua Wordel",
+    "source": "https://unsplash.com/photos/1L_5PT7EKzU"
+  },
+  {
+    "id": "forest",
+    "name": "Forest mist",
+    "src": "assets/wallpapers/forest.jpg",
+    "thumb": "assets/wallpapers/forest-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Dejan Zakic",
+    "source": "https://unsplash.com/photos/rr2EF3J5F2Y"
+  },
+  {
+    "id": "valley",
+    "name": "Mountain valley",
+    "src": "assets/wallpapers/valley.jpg",
+    "thumb": "assets/wallpapers/valley-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Aniket Deole",
+    "source": "https://unsplash.com/photos/M6XC789HLe8"
+  },
+  {
+    "id": "night",
+    "name": "Desert stars",
+    "src": "assets/wallpapers/night.jpg",
+    "thumb": "assets/wallpapers/night-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "Mohammad Alizade",
+    "source": "https://unsplash.com/photos/4wzRuAb-KWs"
+  },
+  {
+    "id": "peaks",
+    "name": "Blue peaks",
+    "src": "assets/wallpapers/peaks.jpg",
+    "thumb": "assets/wallpapers/peaks-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "John Rodenn Castillo",
+    "source": "https://unsplash.com/photos/rQqWOHZ96OM"
+  },
+  {
+    "id": "bridge",
+    "name": "Bridge at dusk",
+    "src": "assets/wallpapers/bridge.jpg",
+    "thumb": "assets/wallpapers/bridge-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Justin Wolff",
+    "source": "https://unsplash.com/photos/pbp_Ww2cewA"
+  },
+  {
+    "id": "ridge",
+    "name": "Sunlit ridges",
+    "src": "assets/wallpapers/ridge.jpg",
+    "thumb": "assets/wallpapers/ridge-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Cristina Gottardi",
+    "source": "https://unsplash.com/photos/wndpWTiDuT0"
+  },
+  {
+    "id": "golden",
+    "name": "Golden hour",
+    "src": "assets/wallpapers/golden.jpg",
+    "thumb": "assets/wallpapers/golden-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Karthik Sreenivas",
+    "source": "https://unsplash.com/photos/tmtkhWbgMu8"
+  },
+  {
+    "id": "summit",
+    "name": "Sunlit summits",
+    "src": "assets/wallpapers/summit.jpg",
+    "thumb": "assets/wallpapers/summit-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "credit": "Rudra Gupta",
+    "source": "https://unsplash.com/photos/PuTSzJJ-qyU"
+  },
+  {
+    "id": "goldcoast",
+    "name": "Gold Coast dusk",
+    "src": "assets/wallpapers/goldcoast.jpg",
+    "thumb": "assets/wallpapers/goldcoast-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "City of Gold Coast",
+    "source": "https://unsplash.com/photos/YiaGblobOGI"
+  },
+  {
+    "id": "sydney",
+    "name": "Sydney Harbour",
+    "src": "assets/wallpapers/sydney.jpg",
+    "thumb": "assets/wallpapers/sydney-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "Caleb",
+    "source": "https://unsplash.com/photos/JmuyB_LibRo"
+  },
+  {
+    "id": "amber",
+    "name": "Amber hills",
+    "src": "assets/wallpapers/amber.jpg",
+    "thumb": "assets/wallpapers/amber-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "Chris Barbalis",
+    "source": "https://unsplash.com/photos/vazZtmYFgFY"
+  },
+  {
+    "id": "mint",
+    "name": "Mint wave",
+    "src": "assets/wallpapers/mint.jpg",
+    "thumb": "assets/wallpapers/mint-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "MagicPattern",
+    "source": "https://unsplash.com/photos/87PP9Zd7MNo"
+  },
+  {
+    "id": "alpine",
+    "name": "Alpine glow",
+    "src": "assets/wallpapers/alpine.jpg",
+    "thumb": "assets/wallpapers/alpine-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "light",
+    "credit": "Cristina Gottardi",
+    "source": "https://unsplash.com/photos/CSpjU6hYo_0"
+  },
+  {
+    "id": "aurora",
+    "name": "Liquid Aurora",
+    "src": "assets/wallpapers/aurora.jpg",
+    "thumb": "assets/wallpapers/aurora-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Dark cyan & purple gradients",
+    "credit": "AI-generated for CleanFrame",
+    "source": "OpenAI image generation"
+  },
+  {
+    "id": "nebula",
+    "name": "Violet Nebula",
+    "src": "assets/wallpapers/nebula.jpg",
+    "thumb": "assets/wallpapers/nebula-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Space & nebula",
+    "credit": "AI-generated for CleanFrame",
+    "source": "OpenAI image generation"
+  },
+  {
+    "id": "custom-alpine-pixels",
+    "name": "Alpine Valley",
+    "src": "assets/wallpapers/custom-alpine-pixels.jpg",
+    "thumb": "assets/wallpapers/custom-alpine-pixels-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Custom wallpapers",
+    "credit": "Owner-supplied image; redistribution terms not verified",
+    "source": "User-provided ChatGPT attachment"
+  },
+  {
+    "id": "custom-midnight-coupe",
+    "name": "Midnight Coupe",
+    "src": "assets/wallpapers/custom-midnight-coupe.jpg",
+    "thumb": "assets/wallpapers/custom-midnight-coupe-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Custom wallpapers",
+    "credit": "Owner-supplied image; redistribution terms not verified",
+    "source": "User-provided ChatGPT attachment"
+  },
+  {
+    "id": "custom-wildflowers",
+    "name": "Wildflower Hills",
+    "src": "assets/wallpapers/custom-wildflowers.jpg",
+    "thumb": "assets/wallpapers/custom-wildflowers-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Custom wallpapers",
+    "credit": "Owner-supplied image; redistribution terms not verified",
+    "source": "User-provided ChatGPT attachment"
+  },
+  {
+    "id": "custom-golden-surf",
+    "name": "Golden Surf",
+    "src": "assets/wallpapers/custom-golden-surf.jpg",
+    "thumb": "assets/wallpapers/custom-golden-surf-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Custom wallpapers",
+    "credit": "Owner-supplied image; redistribution terms not verified",
+    "source": "User-provided ChatGPT attachment"
+  },
+  {
+    "id": "custom-teal-mandala",
+    "name": "Teal Mandala",
+    "src": "assets/wallpapers/custom-teal-mandala.jpg",
+    "thumb": "assets/wallpapers/custom-teal-mandala-thumb.jpg",
+    "pos": "50% 50%",
+    "tone": "dark",
+    "collection": "Custom wallpapers",
+    "credit": "Owner-supplied image; redistribution terms not verified",
+    "source": "User-provided ChatGPT attachment"
+  }
+]
