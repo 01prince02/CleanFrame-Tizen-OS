@@ -1,13 +1,18 @@
-"""Build and sign through an existing official Tizen SDK profile (macOS/Linux)."""
+"""Build and sign through an existing official Tizen SDK profile."""
 import os
 from pathlib import Path
-import pty
-import select
-import signal
+import queue
+import subprocess
 import tempfile
-import termios
+import threading
 import time
 import zipfile
+
+if os.name != 'nt':
+    import pty
+    import select
+    import signal
+    import termios
 
 from font_assets import write_widget_archive
 from local_config import ROOT, load_settings, read_password
@@ -16,6 +21,8 @@ from private_files import check_signed_widget
 
 def sign(command, password=None, timeout=60):
     # SDK output can include profile credentials. Never copy it to diagnostics.
+    if os.name == 'nt':
+        return _sign_windows(command, password, timeout)
     pid, terminal = pty.fork()
     if pid == 0:
         try:
@@ -81,10 +88,96 @@ def sign(command, password=None, timeout=60):
     return os.waitstatus_to_exitcode(status)
 
 
+def _sign_windows(command, password=None, timeout=60):
+    """Answer SDK prompts over a private stdin pipe without echoing passwords."""
+    command = list(command)
+    executable = Path(command[0])
+    if executable.suffix.lower() not in {'.bat', '.cmd', '.exe'}:
+        # Synthetic Python SDKs used by the offline tests have no Windows
+        # executable wrapper. Real Tizen Studio installs provide tizen.bat.
+        import sys
+        if not executable.is_file():
+            return 127
+        command.insert(0, sys.executable)
+        shell = False
+    else:
+        shell = executable.suffix.lower() in {'.bat', '.cmd'}
+    try:
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                   stderr=subprocess.STDOUT, shell=shell,
+                                   creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    except OSError:
+        return 127
+    chunks = queue.Queue()
+
+    def read_output():
+        try:
+            while True:
+                chunk = process.stdout.read(1)
+                if not chunk:
+                    break
+                chunks.put(chunk)
+        finally:
+            chunks.put(None)
+
+    reader = threading.Thread(target=read_output, daemon=True)
+    reader.start()
+    output = bytearray()
+    passwords = saves = 0
+    deadline = time.monotonic() + timeout
+    ended = False
+    try:
+        while not ended:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ValueError('SDK signing timed out.')
+            try:
+                chunk = chunks.get(timeout=min(0.25, remaining))
+            except queue.Empty:
+                if process.poll() is not None:
+                    break
+                continue
+            if chunk is None:
+                ended = True
+                break
+            output.extend(chunk)
+            if len(output) > 1024 * 1024:
+                raise ValueError('SDK produced excessive signing output.')
+            count = output.lower().count(b'password:')
+            if count > passwords:
+                if password is None:
+                    raise ValueError('SDK requested a password. Configure saved profile access or select a protected password file.')
+                if count > 2:
+                    raise ValueError('SDK requested too many passwords. Check both certificate passwords in the selected profile.')
+                process.stdin.write(password + b'\n')
+                process.stdin.flush()
+                passwords = count
+            count = output.count(b'No: (N) ?')
+            if count > saves:
+                process.stdin.write(b'n\n')
+                process.stdin.flush()
+                saves = count
+        remaining = max(0, deadline - time.monotonic())
+        try:
+            return process.wait(timeout=remaining)
+        except subprocess.TimeoutExpired:
+            raise ValueError('SDK signing timed out.') from None
+    finally:
+        if process.poll() is None:
+            process.kill()
+            process.wait()
+        if process.stdin:
+            process.stdin.close()
+        if process.stdout:
+            process.stdout.close()
+
+
 def main(root=ROOT):
     settings = load_settings(root)
     cli = settings['sdk_path'] / 'tools/ide/bin/tizen'
-    if not cli.is_file() or not os.access(cli, os.X_OK):
+    if os.name == 'nt' and not cli.is_file():
+        cli = cli.with_suffix('.bat')
+    if not cli.is_file() or (os.name != 'nt' and not os.access(cli, os.X_OK)):
         raise ValueError('Tizen CLI missing. Set sdk_path in .local/signing.json; see docs/development.md.')
     password = read_password(settings['password_file'], root=root) if settings['password_file'] else None
     dist = root / 'dist'
@@ -109,7 +202,7 @@ def main(root=ROOT):
 if __name__ == '__main__':
     try:
         main()
-    except (ValueError, OSError, zipfile.BadZipFile, termios.error) as error:
+    except (ValueError, OSError, zipfile.BadZipFile) + ((termios.error,) if os.name != 'nt' else ()) as error:
         # Known validation messages contain no credentials. Suppress SDK/OS payloads.
         message = str(error) if isinstance(error, ValueError) else 'Cannot complete packaging. Check SDK/profile setup and local file permissions.'
         raise SystemExit(message) from None

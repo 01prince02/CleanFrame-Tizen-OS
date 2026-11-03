@@ -6,7 +6,7 @@ Updated 2 November 2026. The web launcher has a Tizen 5.0 installation minimum. 
 
 | TV / platform | Web launcher | Native Home | Evidence |
 | --- | --- | --- | --- |
-| Maintainer LS03D, Tizen 9, firmware 2130.0 | Installation and selected remote flows confirmed; other checks remain pending | Exact-value restore/reapply and Home from Netflix confirmed | [Maintainer record](tv-status.md) |
+| Maintainer-reported Samsung Tizen 9 TV | Installation and selected remote flows confirmed; other checks remain pending | Selected native Home operations were reported on the original target; the exact target record is kept private | [Public verification boundary](tv-status.md) |
 | QN43Q60BAFXZA, Tizen 6.5, Chromium 85 | Contributor reports rendering, navigation and hidden-boot work in their adapted fork; this branch reworks the boot path | Contributor reports query/apply/restore/reapply, cold boot and Home from Netflix | [PR #2](https://github.com/nthnclrk/CleanFrame/pull/2), [PR #5](https://github.com/nthnclrk/CleanFrame/pull/5) |
 | QA75LS03BASXNZ, Tizen 6.5, Chromium 85 | Contributor reports Dock labels and rounded utility focus fixed in their adapted build | No native Home result supplied | [PR #10](https://github.com/nthnclrk/CleanFrame/pull/10) |
 | Another 2025 Frame, Tizen 9 | Contributor reports saved apps, scrolling, Home from Netflix and appearance changes on their 0.6.4 build | Existing assignment retained during that update | [PR #7](https://github.com/nthnclrk/CleanFrame/pull/7) |
@@ -35,7 +35,7 @@ For the LS03F, a blocked execution/readback path stopped the experiment before b
 
 ## Native Home limits
 
-The maintained helper stays on its reference .NET 6 target and firmware guard. A .NET 3.1 build reported by a contributor has not been checked on the reference TV. Keep generated `bin/`, `obj/`, DLLs and debug symbols private; they can contain local paths and are not reviewed source.
+The maintained helper uses a target-specific private profile and runtime/firmware checks. A .NET 3.1 build reported by a contributor has not been checked on the original target. Keep generated `bin/`, `obj/`, DLLs and debug symbols private; they can contain local paths and are not reviewed source.
 
 The reference helper requires non-empty original Home and string values. It does not restore absent keys or an initially empty Home operation. Do not substitute Samsung Home for an empty or missing original value. That case needs a reviewed getter/reset contract and a separate reversible experiment.
 

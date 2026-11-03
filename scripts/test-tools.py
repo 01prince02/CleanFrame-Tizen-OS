@@ -19,7 +19,7 @@ from private_files import check_signed_widget, check_widget, generated_path, pri
 
 class ToolTests(unittest.TestCase):
     def setUp(self):
-        # Retain isolated fixtures rather than permanently delete files on an owner's Mac.
+        # Retain isolated fixtures rather than permanently deleting test files.
         self.root = Path(tempfile.mkdtemp(prefix='cleanframe-tools-')).resolve()
         (self.root / 'app').mkdir()
         (self.root / '.local').mkdir()
@@ -48,6 +48,8 @@ class ToolTests(unittest.TestCase):
         self.assertIsNone(self.config(profile='Other profile')['password_file'])
 
     def test_sdk_symlink_resolution_preserves_password_no_follow(self):
+        if os.name == 'nt':
+            self.skipTest('Creating Windows symlinks requires an enabled Windows privilege.')
         sdk = self.root / '.local/real-sdk'
         sdk.mkdir()
         alias = self.root / '.local/SDK path with spaces'
@@ -62,11 +64,12 @@ class ToolTests(unittest.TestCase):
             read_password(settings['password_file'], self.root)
 
     def test_config_identity_validation_and_no_secret_errors(self):
+        portable_absolute = str(Path.cwd() / 'SDK path with spaces')
         with self.assertRaisesRegex(ValueError, 'Set profile'):
-            self.config(sdk_path='/opt/my sdk')
-        selected = self.config(sdk_path='/opt/my sdk', profile='My profile',
+            self.config(sdk_path=portable_absolute)
+        selected = self.config(sdk_path=portable_absolute, profile='My profile',
                                package_id='AbCdEf1234', app_id='AbCdEf1234.MyHome')
-        self.assertEqual(selected['sdk_path'], Path('/opt/my sdk'))
+        self.assertEqual(selected['sdk_path'], Path(portable_absolute))
         for values in [dict(package_id='AbCdEf1234'), dict(package_id='../unsafe', app_id='../unsafe.Home'),
                        dict(package_id='AbCdEf1234', app_id='Other12345.Home'),
                        dict(password='synthetic secret'), dict(profile='bad\nprofile')]:
@@ -84,6 +87,10 @@ class ToolTests(unittest.TestCase):
 
     def test_password_permissions_paths_and_contents(self):
         good = self.password()
+        if os.name == 'nt':
+            with self.assertRaisesRegex(ValueError, 'not supported on Windows'):
+                read_password(good, self.root)
+            return
         self.assertEqual(read_password(good, self.root), b'synthetic password')
         for name in ['app/password.txt', 'password.txt', '.git/password.txt']:
             with self.subTest(name=name), self.assertRaises(ValueError):
@@ -151,7 +158,8 @@ class ToolTests(unittest.TestCase):
             path = self.root / 'app' / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(b'-----BEGIN ' + b'PRIVATE KEY-----')
-        (self.root / 'app/.buildResult/copied-link').symlink_to(self.password())
+        if os.name != 'nt':
+            (self.root / 'app/.buildResult/copied-link').symlink_to(self.password())
         original_read = Path.read_bytes
         def read_source(path):
             if generated_path(str(path)):
@@ -238,9 +246,12 @@ with zipfile.ZipFile(target, 'a') as archive:
         profile = cli.parent / 'profiles.xml'
         profile.write_text('Synthetic profile: do not rewrite')
         identity = dict(package_id='AbCdEf1234', app_id='AbCdEf1234.MyHome')
-        alias = self.root / '.local/SDK alias with spaces'
-        alias.symlink_to(cli.parents[3], target_is_directory=True)
-        settings = self.config(sdk_path=str(alias), profile='My profile', **identity)
+        sdk_path = cli.parents[3]
+        if os.name != 'nt':
+            alias = self.root / '.local/SDK alias with spaces'
+            alias.symlink_to(sdk_path, target_is_directory=True)
+            sdk_path = alias
+        settings = self.config(sdk_path=str(sdk_path), profile='My profile', **identity)
         self.assertEqual(settings['sdk_path'], cli.parents[3].resolve())
         self.assertTrue(settings['sdk_path'].is_relative_to(self.root))
         with patch.object(package, 'load_settings', return_value=settings):
@@ -259,14 +270,19 @@ with zipfile.ZipFile(target, 'a') as archive:
                 package.main(self.root)
             self.assertEqual(target.read_bytes(), baseline)
         password = self.password()
-        settings['password_file'] = password
-        self.assertTrue(settings['password_file'].is_relative_to(self.root))
+        if os.name != 'nt':
+            settings['password_file'] = password
+            self.assertTrue(settings['password_file'].is_relative_to(self.root))
         (cli.parent / 'fail').rename(cli.parent / 'unused-failure')
         (cli.parent / 'prompt').write_text('Use synthetic password prompt')
-        with patch.object(package, 'load_settings', return_value=settings):
-            with contextlib.redirect_stdout(io.StringIO()) as output:
-                package.main(self.root)
-            self.assertNotIn('synthetic password', output.getvalue())
+        if os.name != 'nt':
+            with patch.object(package, 'load_settings', return_value=settings):
+                with contextlib.redirect_stdout(io.StringIO()) as output:
+                    package.main(self.root)
+                self.assertNotIn('synthetic password', output.getvalue())
+        else:
+            with self.assertRaisesRegex(ValueError, 'not supported on Windows'):
+                read_password(password, self.root)
         self.assertEqual(profile.read_text(), 'Synthetic profile: do not rewrite')
         with zipfile.ZipFile(target) as archive:
             self.assertEqual(manifest_identity(archive.read('config.xml')), identity)
@@ -350,7 +366,7 @@ with zipfile.ZipFile(target, 'a') as archive:
         cli.write_text('#!' + sys.executable + '\nimport time\ntime.sleep(10)\n')
         with self.assertRaisesRegex(ValueError, 'timed out'):
             package.sign([str(cli)], timeout=0.1)
-        cli.write_text('#!/nonexistent-offline-test-interpreter\n')
+        cli.write_text('#!' + sys.executable + '\nimport sys\nsys.exit(127)\n')
         self.assertEqual(package.sign([str(cli)], timeout=2), 127)
 
     def test_install_rejects_artifact_before_fake_sdb(self):

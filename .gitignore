@@ -2,11 +2,21 @@
 /.local/
 /dist/
 /node_modules/
+/.venv/
+/venv/
+.vs/
+*.user
+*.suo
+Thumbs.db
 .DS_Store
 __pycache__/
 *.pyc
 .env
 .env.*
+*.log
+*.har
+*.dmp
+*.core
 *.p12
 *.pfx
 *.pkcs12
@@ -22,6 +32,8 @@ certificate-password.txt
 /signing.json
 /device.json
 /certificates/
+/.playwright/
+playwright/.auth/
 
 # Native helper builds can contain local paths and must stay private.
 /scripts/native-home/bin/

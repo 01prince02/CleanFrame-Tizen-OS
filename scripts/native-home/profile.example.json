@@ -1,0 +1,6 @@
+{
+  "model_name": "YOUR_TV_MODEL_NAME",
+  "firmware_version": "YOUR_FULL_FIRMWARE_VERSION",
+  "package_id": "YOUR_SDK_GENERATED_PACKAGE_ID",
+  "app_id": "YOUR_SDK_GENERATED_PACKAGE_ID.YourAppId"
+}

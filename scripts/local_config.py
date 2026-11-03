@@ -91,6 +91,10 @@ def load_settings(root=ROOT):
 
 def read_password(path, root=ROOT):
     """Read an owner-only regular file outside app/ and tracked source folders."""
+    if os.name == 'nt':
+        # Python's Windows stat/chmod APIs do not expose a reliable owner-only
+        # DACL check. Prefer SDK-managed certificate password storage there.
+        raise ValueError('Password files are not supported on Windows; use Samsung SDK-managed profile access.')
     path = Path(path)
     resolved = path.resolve()
     if any(resolved.is_relative_to((root / folder).resolve()) for folder in ['app', '.git']):

@@ -1,4 +1,4 @@
-"""Serve the actual TV UI and the retained design gallery on this Mac."""
+"""Serve the actual TV UI and the retained design gallery on this computer."""
 import argparse
 import io
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -57,7 +57,7 @@ class Preview(SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--port', type=int, default=4795)
+    parser.add_argument('--port', type=int, default=0, help='Use a specific port; by default choose an available port')
     parser.add_argument('--public-fonts', action='store_true', help='Use only the fonts distributed with the source')
     args = parser.parse_args()
     server = PreviewServer(('127.0.0.1', args.port), Preview)

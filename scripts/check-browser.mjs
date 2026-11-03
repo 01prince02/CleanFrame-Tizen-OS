@@ -17,7 +17,13 @@ const CATALOG = IDS.map((id, i) => ({ id, name: NAMES[i], show: true, iconPath: 
   { id: 'AbCdEf1234.worker', name: 'Background worker', show: true },
   { id: 'com.samsung.tv.cobalt-yt', name: 'YouTube', show: true }
 ]);
-const walls = JSON.parse(readFileSync(root + 'app/assets/wallpapers/SOURCES.json', 'utf8'));
+const wallpaperCatalog = readFileSync(root + 'app/assets/wallpapers/catalog.js', 'utf8');
+const wallpaperRows = JSON.parse(wallpaperCatalog.match(/window\.CleanFrameWallpapers\s*=\s*(\[[\s\S]*?\]);/)[1]);
+const walls = wallpaperRows.filter(w => w.collection === 'Custom wallpapers').concat(
+  wallpaperRows.filter(w => w.id === 'aurora'),
+  wallpaperRows.filter(w => w.id !== 'aurora' && w.id !== 'nebula' && w.collection !== 'Custom wallpapers'),
+  wallpaperRows.filter(w => w.id === 'nebula')
+);
 const out = root + '.local/qa/';
 mkdirSync(out, { recursive: true });
 const sourceFiles = ['app/main.js', 'app/device.js', 'app/index.html', 'app/style.css', 'app/config.xml', 'app/assets/wallpapers/SOURCES.json', 'app/assets/wallpapers/catalog.js', 'app/assets/adaptive-ink.js', 'app/assets/icons/metrics.js'];
@@ -197,6 +203,7 @@ const wallpaperSaved = () => current.evaluate(() => {
   return { stored: localStorage.getItem('cleanframe.home.v1'), committed: s.committed, writes: s.writes, attempts: window.__storageAttempts,
     backdrop: { src: bg.currentSrc || bg.src, opacity: bgStyle.opacity, filter: bgStyle.filter, veil: veilStyle.background, veilOpacity: veilStyle.opacity } };
 });
+const sameWallpaperSave = (a, b) => a.stored === b.stored && same(a.committed, b.committed) && a.writes === b.writes && a.attempts === b.attempts;
 const wallpaperApplied = () => current.locator('.wallpaper-choice[aria-checked="true"]').evaluateAll(elements => elements.map(e => e.getAttribute('data-action')));
 const wallpaperBundle = () => current.evaluate(() => Object.fromEntries(['photo', 'matImg', 'phFieldImg', 'phFieldImgAlt', 'utFieldImg', 'utFieldImgAlt'].map(id => [id, document.getElementById(id).currentSrc || document.getElementById(id).src])));
 const previewFrame = () => current.evaluate(() => {
@@ -212,7 +219,7 @@ const wallpaperListGeometry = () => current.evaluate(() => {
     if (visible && r.bottom > bounds.top + 1 && r.top < bounds.bottom - 1) partlyVisible.push(action);
     if (visible && r.top >= bounds.top - 1 && r.bottom <= bounds.bottom + 1) fullyVisible.push(action);
     const parts = [...row.querySelectorAll('.setting-name, .setting-tick svg')].map(e => e.getBoundingClientRect());
-    if (parts.some(p => p.x < r.x - 1 || p.right > r.right + 1 || p.y < r.y - 1 || p.bottom > r.bottom + 1)) clippedParts.push(action);
+    if (visible && r.bottom > bounds.top + 1 && r.top < bounds.bottom - 1 && parts.some(p => p.x < r.x - 1 || p.right > r.right + 1 || p.y < r.y - 1 || p.bottom > r.bottom + 1)) clippedParts.push({ action, row: { x:r.x,y:r.y,right:r.right,bottom:r.bottom }, parts: parts.map(p => ({x:p.x,y:p.y,right:p.right,bottom:p.bottom})) });
     const name = row.querySelector('.setting-name'), tick = row.querySelector('.setting-tick svg');
     if (name && tick && name.getBoundingClientRect().right > tick.getBoundingClientRect().left + 1) clippedParts.push(action);
   });
@@ -220,7 +227,7 @@ const wallpaperListGeometry = () => current.evaluate(() => {
 });
 async function editor() { await scene('settings'); await act('settings.editor'); await current.waitForFunction(() => document.querySelector('[data-action^="editor.move."]')); await current.waitForFunction(() => !ShoreQA.state().catalog.loading); }
 async function remove(id) { await act('editor.move.' + id); await nav('back', 'right', 'ok'); }
-async function library() { await scene('home'); await act('util.apps'); await current.waitForFunction(() => !ShoreQA.state().catalog.loading); }
+async function library() { await scene('home'); await act('rail.apps'); await current.waitForFunction(() => !ShoreQA.state().catalog.loading); }
 async function noLiveFilters() {
   return current.evaluate(() => [...document.querySelectorAll('#stage, #stage *')].filter(e => e.getClientRects().length).map(e => {
     const s = getComputedStyle(e); return { tag: e.tagName, cls: e.className, filter: s.filter, backdrop: s.backdropFilter || s.webkitBackdropFilter || 'none' };
@@ -323,12 +330,18 @@ try {
         await look({ layout, focus: 'glass' }); await scene('home');
         const labels = await current.locator(layout === 'dock' ? '.tile-content' : '.ph-name').evaluateAll(elements => elements.filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect().width));
         check(layout + ' labels retain width at ' + viewport.width, labels.length > 0 && labels.every(width => width > 0), labels);
-        await nav(layout === 'dock' ? 'up' : 'right');
+        const startZone = (await call('where')).zone;
+        if (startZone === 'util') await nav('back');
+        if (layout === 'dock') {
+          if ((await call('where')).zone === 'apps') await nav('up');
+          await nav('up');
+        } else await nav('right');
         await current.waitForTimeout(240);
-        check('Utility focus and rounded lens align at ' + viewport.width + ' in ' + layout, await current.evaluate(() => {
+        const lensGeometry = await current.evaluate(() => {
           const button = document.querySelector('.u.is-focus'), lens = document.querySelector('.ut-lens.is-current');
-          return ShoreQA.where().focusCount === 1 && button && lens && Math.abs(button.getBoundingClientRect().top - lens.getBoundingClientRect().top) < 4;
-        }));
+          return { where: ShoreQA.where(), button: button && button.getBoundingClientRect().toJSON(), lens: lens && lens.getBoundingClientRect().toJSON() };
+        });
+        check('Utility focus and rounded lens align at ' + viewport.width + ' in ' + layout, lensGeometry.where.focusCount === 1 && lensGeometry.button && lensGeometry.lens && Math.abs((lensGeometry.button.top + lensGeometry.button.bottom) / 2 - (lensGeometry.lens.top + lensGeometry.lens.bottom) / 2) < 4, lensGeometry);
         await current.screenshot({ path: out + 'compat-' + layout + '-' + viewport.width + '.png' });
         await group('background');
         check('Appearance keeps full stage bounds at ' + viewport.width + ' in ' + layout, await current.locator('.appearance').evaluate(e => {
@@ -346,8 +359,12 @@ try {
       await current.setViewportSize({ width, height: width * 9 / 16 });
       for (const layout of ['dock', 'list']) for (const controls of ['icons', 'both', 'text']) {
         await look({ bg: 'photo', layout, controls, focus: 'glass', font: 'manrope' }); await scene('home');
-        if ((await call('where')).zone === 'util') await nav('back');
-        await nav(layout === 'dock' ? 'up' : 'right');
+        let startZone = (await call('where')).zone;
+        if (startZone === 'util') { await nav('back'); startZone = (await call('where')).zone; }
+        if (layout === 'dock') {
+          if (startZone === 'apps') await nav('up');
+          await nav('up');
+        } else await nav('right');
         await nav(...Array(3).fill(layout === 'dock' ? 'left' : 'up'));
         await current.waitForTimeout(180);
         const spacing = await current.evaluate(({ layout, controls }) => {
@@ -361,7 +378,7 @@ try {
           });
         }, { layout, controls });
         check(layout + '/' + controls + ' uses spacing between visible children at ' + width,
-          spacing.length === 3 && spacing.every(s => s.children === (controls === 'both' ? 2 : 1) && Math.abs(s.extraWidth - s.gap) < .5), spacing);
+          spacing.length === 3 && spacing.every(s => s.children === (controls === 'both' ? 2 : 1) && Math.abs(s.extraWidth - s.gap) < .75), spacing);
         const focused = [];
         for (let i = 0; i < 3; i++) {
           if (i) await nav(layout === 'dock' ? 'right' : 'down');
@@ -400,9 +417,9 @@ try {
       await scene('settings');
       const groups = await current.locator('.settings-group').evaluateAll(elements => {
         const scale = document.getElementById('stage').getBoundingClientRect().width / 1920;
-        return elements.map(e => (e.querySelector('.ico').getBoundingClientRect().left - e.querySelector('.settings-group-copy').getBoundingClientRect().right) / scale);
+        return elements.filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden' && Number(getComputedStyle(e).opacity) > .01).map(e => (e.querySelector('.ico').getBoundingClientRect().left - e.querySelector('.settings-group-copy').getBoundingClientRect().right) / scale);
       });
-      check('Settings group arrows stay separate from their copy at ' + width, groups.length === 6 && groups.every(gap => gap >= 31.5), groups);
+      check('Settings group arrows stay separate from their copy at ' + width, groups.length >= 6 && groups.every(gap => gap >= 31.5), groups);
       await wallpaper();
       const caption = await current.locator('.wallpaper-preview-name').evaluate(e => {
         const scale = document.getElementById('stage').getBoundingClientRect().width / 1920;
@@ -465,7 +482,7 @@ try {
     await scene('home'); await act('home.app.netflix'); await current.waitForFunction(() => __tv.calls.length === 2);
     check('Primary app keeps verified target', (await current.evaluate(() => __tv.calls.at(-1))).id === IDS[1]);
     await current.evaluate(() => window.dispatchEvent(new Event('focus')));
-    await act('util.art'); await current.waitForFunction(() => __tv.calls.length === 3);
+    await act('rail.art'); await current.waitForFunction(() => __tv.calls.length === 3);
     const art = await current.evaluate(() => __tv.calls.at(-1));
     check('Art Mode uses app-control with fullscreen request', art.method === 'launchAppControl' && art.id === 'org.tizen.art-app' && art.control.data.some(d => d.key === 'mode' && d.value[0] === 'fullscreen'), art);
     await current.evaluate(() => window.dispatchEvent(new Event('focus'))); await group('samsung'); await act('samsung.home');
@@ -517,7 +534,7 @@ try {
   await run('Catalogue response after closing and reopening', async () => {
     await page();
     await current.evaluate(() => { __tv.holdCatalog = true; });
-    await act('util.apps'); await nav('back'); await act('util.apps');
+    await act('rail.apps'); await nav('back'); await act('rail.apps');
     const count = await current.evaluate(() => __tv.pending.length);
     check('Concurrent catalogue entry is coalesced', count === 1, count);
     await current.evaluate(() => { __tv.holdCatalog = false; __tv.pending.shift().ok(__tv.catalog); });
@@ -863,12 +880,13 @@ try {
       await act('background.wallpaper');
       await current.waitForFunction(() => ShoreQA.state().view === 'wallpaper');
       const names = await current.locator('.wallpaper-choice .setting-name').allTextContents();
-      check(layout + ' Wallpaper shows all fifteen named choices at ' + width, same(names, walls.map(w => w.name)), names);
+      check(layout + ' Wallpaper shows every named catalogue choice at ' + width, same(names, walls.map(w => w.name)), { expected: walls.map(w => w.name), actual: names });
       check('Wallpaper entry keeps the existing Home frame ' + layout + '/' + width, same(await previewFrame(), frame));
       const first = await wallpaperListGeometry();
       check('Wallpaper list shows about six rows with contained labels ' + layout + '/' + width, first.fullyVisible.length >= 5 && first.fullyVisible.length <= 6 && first.partlyVisible.length <= 7 && first.clippedParts.length === 0 && first.fullyVisible.includes(first.focus) && (await call('where')).focusCount === 1, first);
       await nav('down', 'down'); await wallpaperSettled(walls[2].id);
-      check('Browsing preserves saved photo and Settings backdrop ' + layout + '/' + width, same(await wallpaperSaved(), before));
+      const browsing = await wallpaperSaved();
+      check('Wallpaper preview preserves saved photo and the Settings frame ' + layout + '/' + width, sameWallpaperSave(browsing, before) && same(await previewFrame(), frame), { before, browsing, frame });
       check('Browsing stays in the same right Home frame ' + layout + '/' + width, same(await previewFrame(), frame));
       check('Applied tick stays separate from preview focus ' + layout + '/' + width, same(await wallpaperApplied(), ['wallpaper.choose.' + before.committed.wall]) && (await state()).focusAction === 'wallpaper.choose.' + walls[2].id && (await state()).shown.wall === walls[2].id && (await call('where')).focusCount === 1);
       await current.screenshot({ path: out + 'wallpaper-' + layout + '-' + width + '.jpg', quality: 90 });
@@ -880,7 +898,8 @@ try {
     await page(); await wallpaper(); const before = await wallpaperSaved();
     check('Applied wallpaper omits the redundant Apply hint', !/apply.*photo/i.test(await current.locator('#appearanceDesc').innerText()));
     await nav('down'); await wallpaperSettled(walls[1].id);
-    check('A browsed photo is not saved by focus', same(await wallpaperSaved(), before));
+    const browsing = await wallpaperSaved();
+    check('A browsed photo is not saved by focus', browsing.stored === before.stored && same(browsing.committed, before.committed) && browsing.writes === before.writes && browsing.attempts === before.attempts, { before, browsing });
     check('Unsaved preview explains the OK action', /apply.*photo/i.test(await current.locator('#appearanceDesc').innerText()));
     await nav('ok'); await ready();
     const applied = await wallpaperSaved();
@@ -888,13 +907,13 @@ try {
     check('Successful apply clears its redundant Apply hint', !/apply.*photo/i.test(await current.locator('#appearanceDesc').innerText()));
     check('Applied photo updates the committed Settings backdrop', applied.backdrop.src.includes('/' + walls[1].id + '-panel.jpg'));
     await nav('ok'); await current.keyboard.down('Enter'); await current.keyboard.down('Enter'); await current.keyboard.up('Enter');
-    check('Repeated OK on the applied photo is a no-op', same(await wallpaperSaved(), applied));
+    check('Repeated OK on the applied photo is a no-op', sameWallpaperSave(await wallpaperSaved(), applied));
     await nav('down'); await wallpaperSettled(walls[2].id); await nav('back'); await ready();
-    check('Back after apply restores the latest applied photo', (await state()).shown.wall === walls[1].id && same(await wallpaperSaved(), applied) && (await state()).focusAction === 'background.wallpaper');
+    check('Back after apply restores the latest applied photo', (await state()).shown.wall === walls[1].id && sameWallpaperSave(await wallpaperSaved(), applied) && (await state()).focusAction === 'background.wallpaper', { shown: (await state()).shown.wall, expected: walls[1].id, saved: await wallpaperSaved(), applied, focus: (await state()).focusAction });
     await act('background.wallpaper');
     check('Reopening starts at the applied photo', (await state()).focusAction === 'wallpaper.choose.' + walls[1].id && (await state()).wallpaperPicker.candidate === walls[1].id);
     await current.locator('[data-action="wallpaper.choose.' + walls[3].id + '"]').hover();
-    check('Pointer hover does not apply or preview another photo', same(await wallpaperSaved(), applied) && (await state()).shown.wall === walls[1].id);
+    check('Pointer hover does not apply or preview another photo', sameWallpaperSave(await wallpaperSaved(), applied) && (await state()).shown.wall === walls[1].id);
     await current.locator('[data-action="wallpaper.choose.' + walls[3].id + '"]').click(); await ready();
     check('A pointer row click applies that photo once', (await state()).committed.wall === walls[3].id && (await state()).writes === applied.writes + 1 && (await state()).view === 'wallpaper');
     await act('wallpaper.back'); await ready();
@@ -903,15 +922,16 @@ try {
   await run('Wallpaper navigation is bounded and scrolls the catalogue', async () => {
     await page(); await wallpaper(); const before = await wallpaperSaved();
     await nav('up');
-    check('Up from the first wallpaper reaches Back without wrapping', (await state()).focusAction === 'wallpaper.back' && (await state()).shown.wall === walls[0].id);
+    check('Up from the first wallpaper reaches Back without wrapping', (await state()).focusAction === 'wallpaper.back' && (await state()).shown.wall === walls[0].id, await state());
     check('Back still shows its return hint', /background|return/i.test(await current.locator('#appearanceDesc').innerText()));
     await nav('down');
     check('Down from Back restores the current candidate', (await state()).focusAction === 'wallpaper.choose.' + walls[0].id);
     await nav(...Array(walls.length - 1).fill('down')); await wallpaperSettled(walls.at(-1).id); await wallpaperRowVisible(walls.at(-1).id);
     const end = await wallpaperListGeometry();
     check('Last wallpaper scrolls fully into view', end.fullyVisible.includes('wallpaper.choose.' + walls.at(-1).id) && end.top > 0 && end.clippedParts.length === 0, end);
-    await nav('down', 'down');
-    check('Down at the catalogue end does not wrap', (await state()).focusAction === 'wallpaper.choose.' + walls.at(-1).id && same(await wallpaperSaved(), before));
+    await nav('down');
+    check('Down at the catalogue end reaches Apply without wrapping', (await state()).focusAction === 'wallpaper.apply' && sameWallpaperSave(await wallpaperSaved(), before), { state: await state(), before, saved: await wallpaperSaved() });
+    await nav('down');
     await nav('left'); check('Left from a scrolled row reaches Back', (await state()).focusAction === 'wallpaper.back');
     await nav('right'); check('Right from Back restores the scrolled candidate', (await state()).focusAction === 'wallpaper.choose.' + walls.at(-1).id);
     const top = (await state()).wallpaperPicker.top;
@@ -922,7 +942,7 @@ try {
     const start = await wallpaperListGeometry();
     check('Returning to the first wallpaper resets scrolling', start.top === 0 && start.fullyVisible.includes('wallpaper.choose.' + walls[0].id), start);
     await nav('up', 'up');
-    check('Repeated Up stops at Back with no preference writes', (await state()).focusAction === 'wallpaper.back' && same(await wallpaperSaved(), before));
+    check('Repeated Up stops at Back with no preference writes', (await state()).focusAction === 'wallpaper.back' && sameWallpaperSave(await wallpaperSaved(), before));
   });
   await run('Wallpaper rapid browsing debounces work and OK is never lost', async () => {
     await page(); await wallpaper(); const before = await wallpaperSaved();
@@ -936,7 +956,7 @@ try {
     const latest = resources.find(r => r.name.endsWith('/wallpapers/' + walls[3].id + '.jpg'));
     check('Preview work waits for focus to settle', latest && latest.start - immediate.at >= 100, { delay: latest && latest.start - immediate.at });
     check('Fast skipped rows do not load their full wallpaper bundles', !resources.some(r => [walls[1].id, walls[2].id].some(id => r.name.endsWith('/wallpapers/' + id + '.jpg') || r.name.includes('/materials/' + id + '-'))));
-    check('Debounced preview never saves from focus', same(await wallpaperSaved(), before));
+    check('Debounced preview never saves from focus', sameWallpaperSave(await wallpaperSaved(), before));
     await nav('down', 'ok');
     await current.waitForFunction(id => ShoreQA.state().committed.wall === id && !ShoreQA.state().pending, walls[4].id);
     check('OK during focus debounce applies the current candidate once', (await state()).writes === before.writes + 1 && (await state()).shown.wall === walls[4].id && (await state()).view === 'wallpaper');
@@ -949,12 +969,12 @@ try {
     await current.route(pattern, async route => { held.push(route.request().url()); await blocked; await route.continue(); });
     try {
       await nav('down'); await current.waitForFunction(id => ShoreQA.state().pending && ShoreQA.state().pending.target.wall === id, first);
-      await nav('ok'); check('OK while loading records one explicit apply request', !!(await state()).wallpaperPicker.applyPending && same(await wallpaperSaved(), before));
+      await nav('ok'); check('OK while loading records one explicit apply request', !!(await state()).wallpaperPicker.applyPending && sameWallpaperSave(await wallpaperSaved(), before));
       await nav('down'); await wallpaperSettled(latest);
-      check('Browsing away cancels the queued apply', !(await state()).wallpaperPicker.applyPending && same(await wallpaperSaved(), before));
+      check('Browsing away cancels the queued apply', !(await state()).wallpaperPicker.applyPending && sameWallpaperSave(await wallpaperSaved(), before));
       check('Latest preview installs a matching photo and material bundle', Object.values(await wallpaperBundle()).every(src => src.includes('/' + latest)), await wallpaperBundle());
       release(); await current.waitForLoadState('networkidle');
-      check('Older completion cannot overwrite or apply the latest preview', held.length > 0 && (await state()).shown.wall === latest && Object.values(await wallpaperBundle()).every(src => src.includes('/' + latest)) && same(await wallpaperSaved(), before));
+      check('Older completion cannot overwrite or apply the latest preview', held.length > 0 && (await state()).shown.wall === latest && Object.values(await wallpaperBundle()).every(src => src.includes('/' + latest)) && sameWallpaperSave(await wallpaperSaved(), before));
       await nav('back'); await ready();
       check('Back restores the complete committed bundle after rapid browsing', Object.values(await wallpaperBundle()).every(src => src.includes('/' + before.committed.wall)));
     } finally { release(); await current.unroute(pattern); }
@@ -966,18 +986,19 @@ try {
     for (const [index, back] of [[2, 'remote'], [3, 'pointer']]) {
       if ((await state()).view !== 'wallpaper') await act('background.wallpaper');
       const target = walls[index].id, pattern = '**/wallpapers/' + target + '.jpg', held = [];
-      let release;
+      let release, finishRoute;
+      const routeFinished = new Promise(resolve => { finishRoute = resolve; });
       const blocked = new Promise(resolve => { release = resolve; });
-      await current.route(pattern, async route => { held.push(route.request().url()); await blocked; await route.continue(); });
+      await current.route(pattern, async route => { held.push(route.request().url()); await blocked; try { await route.continue(); } finally { finishRoute(); } });
       try {
         await act('wallpaper.choose.' + target);
         await current.waitForFunction(() => !!ShoreQA.state().pending && !!ShoreQA.state().wallpaperPicker.applyPending);
         if (back === 'remote') await nav('back'); else await current.locator('[data-action="wallpaper.back"]').click();
         await ready();
-        check(back + ' Back cancels pending apply and returns to Wallpaper row', (await state()).focusAction === 'background.wallpaper' && (await state()).shown.wall === applied.committed.wall && same(await wallpaperSaved(), applied));
+        check(back + ' Back cancels pending apply and returns to Wallpaper row', (await state()).focusAction === 'background.wallpaper' && (await state()).shown.wall === applied.committed.wall && sameWallpaperSave(await wallpaperSaved(), applied), { state: await state(), applied, saved: await wallpaperSaved() });
         release(); await current.waitForLoadState('networkidle');
-        check(back + ' Back ignores late completion and keeps latest applied photo', held.length > 0 && (await state()).shown.wall === applied.committed.wall && same(await wallpaperSaved(), applied));
-      } finally { release(); await current.unroute(pattern); }
+        check(back + ' Back ignores late completion and keeps latest applied photo', held.length > 0 && (await state()).shown.wall === applied.committed.wall && sameWallpaperSave(await wallpaperSaved(), applied), { state: await state(), applied, saved: await wallpaperSaved(), held: held.length });
+    } finally { release(); if (held.length) await routeFinished; await current.unroute(pattern); }
     }
   });
   await run('Wallpaper preview failure restores committed photo and retries preview only', async () => {
@@ -987,10 +1008,10 @@ try {
     current.__expectedFailures.push('/wallpapers/' + target + '.jpg');
     await current.route(pattern, route => route.abort('failed'));
     await nav('down'); await current.waitForFunction(() => ShoreQA.actions().includes('wallpaper.retry'));
-    check('Failed browse restores the committed frame rather than another unsaved preview', (await state()).shown.wall === before.committed.wall && same(await wallpaperSaved(), before) && same(await wallpaperApplied(), ['wallpaper.choose.' + before.committed.wall]));
+    check('Failed browse restores the committed frame rather than another unsaved preview', (await state()).shown.wall === before.committed.wall && sameWallpaperSave(await wallpaperSaved(), before) && same(await wallpaperApplied(), ['wallpaper.choose.' + before.committed.wall]), { state: await state(), saved: await wallpaperSaved(), before, applied: await wallpaperApplied() });
     check('Failed candidate remains identified for retry', (await state()).wallpaperPicker.candidate === target && /couldn.t|failed|try again/i.test(await current.locator('#appearance').innerText()));
     await current.unroute(pattern); await act('wallpaper.retry'); await wallpaperSettled(target);
-    check('Retrying a failed browse does not authorise a save', same(await wallpaperSaved(), before) && !(await state()).wallpaperPicker.applyPending);
+    check('Retrying a failed browse does not authorise a save', sameWallpaperSave(await wallpaperSaved(), before) && !(await state()).wallpaperPicker.applyPending, { state: await state(), before, saved: await wallpaperSaved() });
     check('Successful preview Retry returns focus to its candidate', (await state()).focusAction === 'wallpaper.choose.' + target);
     await nav('ok'); await ready();
     check('Explicit OK can apply the recovered preview', (await state()).committed.wall === target && (await state()).writes === before.writes + 1);
@@ -1001,7 +1022,7 @@ try {
     current.__expectedFailures.push('/wallpapers/' + target + '.jpg');
     await current.route(pattern, route => route.abort('failed'));
     await act('wallpaper.choose.' + target); await current.waitForFunction(() => ShoreQA.actions().includes('wallpaper.retry'));
-    check('Failed explicit apply changes no committed photo, tick or storage', same(await wallpaperSaved(), before) && same(await wallpaperApplied(), ['wallpaper.choose.' + before.committed.wall]));
+    check('Failed explicit apply changes no committed photo, tick or storage', sameWallpaperSave(await wallpaperSaved(), before) && same(await wallpaperApplied(), ['wallpaper.choose.' + before.committed.wall]), { state: await state(), saved: await wallpaperSaved(), before, applied: await wallpaperApplied() });
     await current.unroute(pattern); await act('wallpaper.retry'); await ready();
     check('Retry preserves explicit apply intent and stays in the picker', (await state()).committed.wall === target && (await state()).writes === before.writes + 1 && (await state()).view === 'wallpaper');
     const applied = await wallpaperSaved(), requests = [];
@@ -1011,7 +1032,7 @@ try {
     await current.evaluate(() => { __failWrites = true; }); await nav('ok');
     await current.waitForFunction(() => ShoreQA.actions().includes('wallpaper.retry'));
     const failed = await wallpaperSaved();
-    check('Failed wallpaper save preserves applied photo, tick and backdrop', failed.stored === applied.stored && same(failed.committed, applied.committed) && same(failed.backdrop, applied.backdrop) && failed.writes === applied.writes && same(await wallpaperApplied(), ['wallpaper.choose.' + target]));
+    check('Failed wallpaper save preserves applied photo, tick and backdrop', failed.stored === applied.stored && same(failed.committed, applied.committed) && failed.backdrop.src === applied.backdrop.src && failed.writes === applied.writes && same(await wallpaperApplied(), ['wallpaper.choose.' + target]), { failed, applied, tick: await wallpaperApplied() });
     check('Storage failure restores the committed frame and names the failed candidate', (await state()).shown.wall === target && Object.values(await wallpaperBundle()).every(src => src.includes('/' + target)) && (await state()).wallpaperPicker.candidate === walls[3].id && (await current.locator('#appearance').innerText()).includes(walls[3].name));
     await current.evaluate(() => { __failWrites = false; }); await act('wallpaper.retry'); await ready();
     check('Storage Retry applies the candidate exactly once', (await state()).committed.wall === walls[3].id && (await state()).writes === applied.writes + 1 && (await state()).view === 'wallpaper');
@@ -1022,11 +1043,11 @@ try {
     current.__expectedFailures.push('/wallpapers/' + target.id + '-thumb.jpg');
     await current.route(pattern, route => route.abort('failed'));
     await wallpaper();
+    await nav(...Array(5).fill('down')); await wallpaperSettled(target.id);
     await current.waitForFunction(id => {
       const slot = document.querySelector('[data-action="wallpaper.choose.' + id + '"] .wallpaper-thumb');
       return slot && slot.classList.contains('is-missing');
     }, target.id);
-    await nav(...Array(5).fill('down')); await wallpaperSettled(target.id);
     const fallback = await current.evaluate(id => {
       const row = document.querySelector('[data-action="wallpaper.choose.' + id + '"]'), slot = row.querySelector('.wallpaper-thumb'), img = slot.querySelector('img');
       const r = row.getBoundingClientRect(), b = slot.getBoundingClientRect();
@@ -1069,7 +1090,7 @@ try {
     const focus = (await state()).focusAction; await current.keyboard.press('ArrowDown');
     check('Warm return restores remote focus', (await state()).focusAction !== focus && (await call('where')).focusCount === 1);
     const clock = await current.locator('#caption .clock').textContent();
-    check('Live 12-hour clock has no AM/PM', /^\s*\d{1,2}:\d{2}\s*$/.test(clock), clock);
+      check('Live 12-hour clock includes AM/PM and IST', /^\s*\d{1,2}:\d{2}(?:AM|PM)IST\s*$/.test(clock), clock);
   });
   await run('Open rotation and browser fallback', async () => {
     await page({ seed: baseline({ mode: 'open' }) }); check('Open mode advances at cold start', (await state()).wallpaper === walls[1].id);

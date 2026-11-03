@@ -1,26 +1,25 @@
-# Native Home control
+# Experimental native Home control
 
-For the separate 2020 LS03T report and experimental source templates, see
-[the 2020 profile](frame-2020/README.md). It does not change this helper’s runtime
-or reference-firmware guard.
+This one-shot development helper is separate from CleanFrame's Tizen web app. It uses undocumented Samsung TV native APIs and a target-specific SDB execution route to query or change Home/startup state. It is not an official Samsung app-installation workflow, does not work as a generic launcher feature, and is not recommended for routine use.
 
-This one-shot development helper is scoped to the reference Samsung Frame and firmware 2130.0. It does not run inside CleanFrame or remain active on the TV. It uses the existing SDB developer connection and the published package-name command workaround to execute as SDK UID 901. It does not request root or change security policy.
+The helper supports read-only query and guarded apply/restore. Apply writes Home/startup-related values and enables autostart; it is not Home-only. A TV setting or firmware update can make an old snapshot unsafe. Query/inspect also stages temporary files on the TV. The apply/restore route depends on the same SDB transport; an independent recovery route is not established.
 
-`Control.cs` exposes read-only query, guarded apply, and exact-value restore through native Home and vconf APIs. It refuses other firmware, root, changed original values, or an ineligible/missing app. Apply failures attempt immediate restore. The baseline and compiled tools remain in ignored `.local/native-home/`.
+## Target configuration
 
-From the project root:
+Do not put real target data in tracked files. If an owner separately authorizes an investigation, copy `profile.example.json` to ignored `.local/native-home/profile.json` and enter the exact model name, full firmware version and SDK-generated package/application identities. Configure the device address privately in `.local/device.json`. Store compiled output and an exact original-state snapshot only in ignored `.local/native-home/` storage.
+
+The runner checks the configured model before staging. The helper checks the configured firmware, package, application ID, runtime bitness and SDK user, and refuses a mismatched state. These guards reduce mistakes; they do not establish safety or support on another TV. Never remove or weaken them to force a run.
+
+## Local build and use
+
+The compiled helper must already exist in `.local/native-home/out/` with its runtime and dependency files. Review `Control.cs`, all scripts and the recovery plan for the exact target before use. The runner performs device operations even in query mode; only invoke it under a separate explicit owner request.
 
 ```sh
 python3 scripts/native-home/run.py query
+python3 scripts/native-home/run.py apply
 python3 scripts/native-home/run.py restore
 ```
 
-The existing private `original.json` is the tested rollback baseline. Do not overwrite it with the applied state. The runner re-stages the helper and baseline each time. The query/apply/restore/inspect shell source is retained beside the runner. It needs the compiled output in `.local/native-home/out/`; build with the private verified Microsoft SDK when the C# source changes. No local address, device identifier, compiled binary or signing secret belongs in this source folder.
+Apply/restore require a private `original.json` captured from the supported original state. Do not overwrite it with the applied state. If it is missing, stale, empty, or does not match the live state, stop. Do not infer a reset value. Confirm actual screen behavior with the TV owner; a return code alone does not prove the visible destination.
 
-Even query/inspect stages temporary helper files on the device. These are device operations, not offline repository checks. A clone without the private baseline, SDK and compiled output cannot perform the tested rollback. Preserve the local recovery folder separately; GitHub is a source backup only.
-
-The implementation was reviewed against the [published S90D native Home work](https://github.com/splitcipher/couchroot/blob/83906b468836869933012da03a4018fb339462b3/docs/devices/s90d/README.md). This Frame's native query, apply/restore/reapply and physical Home-from-Netflix test were checked independently. Source review does not replace device testing after future firmware changes.
-
-Other owners' reports are recorded in [TV compatibility evidence](../../docs/compatibility.md). They do not extend this helper's firmware/runtime guards. The current snapshot validator rejects empty Home and string values; it has no absent-key reset implementation. Restore depends on the same SDB transport as apply, with no independently verified fallback if that transport becomes unavailable.
-
-The reference helper is not Home-only: apply assigns the Home operation, writes the Home app setting and enables autostart. The original snapshot may contain autostart `0` or `1`, but it must still match the TV before apply. A settings change makes an older snapshot stale. Do not use this path for an experiment that excludes startup changes.
+The separate [`frame-2020` source](frame-2020/README.md) is a different experimental profile and does not broaden this helper's target guard. For ordinary Tizen app development, installation and supported APIs, see the [portable TV setup guide](../../docs/agent-tv-setup-guide.md).

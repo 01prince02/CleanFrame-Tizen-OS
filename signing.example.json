@@ -1,5 +1,5 @@
 {
-  "sdk_path": "/PATH/TO/YOUR/tizen-studio",
+  "sdk_path": "YOUR_LOCAL_TIZEN_STUDIO_PATH",
   "profile": "YOUR_CERTIFICATE_PROFILE",
   "package_id": "YOUR_SDK_GENERATED_PACKAGE_ID",
   "app_id": "YOUR_SDK_GENERATED_PACKAGE_ID.CleanFrame",

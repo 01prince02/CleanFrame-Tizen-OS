@@ -11,7 +11,7 @@ This guide helps an AI coding assistant work safely in this existing CleanFrame 
 5. Read docs/testing.md to distinguish source tests, browser preview results and physical TV evidence.
 6. Inspect git status and the existing diff. Preserve unrelated user edits; never reset, clean or overwrite them.
 
-The app source is in app/. It is a Samsung Tizen web app built with HTML, CSS and ES5-compatible JavaScript. scripts/ contains preview, validation, packaging, device and experimental native-Home tools. docs/ describes current behavior and the limits of recorded TV tests.
+The app source is in app/. It is a Samsung Tizen web app built with HTML, CSS and ES5-compatible JavaScript. scripts/ contains preview, validation, packaging, device and experimental native-Home tools. docs/ describes current behavior and the limits of recorded TV tests. Read AI-SETUP-GUIDE.md for beginner setup with Codex, Antigravity, Claude Code, ChatGPT or Copilot.
 
 ## Work in small, reviewable steps
 
@@ -20,6 +20,7 @@ The app source is in app/. It is a Samsung Tizen web app built with HTML, CSS an
 - Keep feature behavior honest. Do not simulate a successful TV app launch or present unsupported Samsung settings as working.
 - Keep glass blur and image analysis off the TV animation path. Use the bundled material images and lightweight transforms/opacity for focus effects.
 - Keep credentials and machine-specific values in ignored local configuration. Never print or commit certificates, passwords, account details, DUIDs, local addresses, private logs or signed WGTs.
+- Never insert a real computer path, user name, TV address, DUID or signing identity into tracked source or public documentation. Use relative paths, safe placeholders and ignored local configuration.
 - Preserve LICENSE, THIRD_PARTY_NOTICES.md, image credits and each asset's separate license. The owner-supplied wallpaper files currently have no independently verified public redistribution terms; do not redistribute them without confirming rights.
 - Do not remove Samsung system apps, root or exploit the TV, bypass security, alter firmware, or replace Smart Hub.
 
@@ -52,7 +53,7 @@ Use only official Samsung/Tizen SDK tooling. Do not download DLLs from third-par
 
 Samsung Tizen apps can receive only the remote events the platform delivers and permits the app to register. Shortcut, volume, mute, power and voice controls may be reserved by Samsung. Do not override them or claim support without testing on the target remote.
 
-The native-Home helper scripts are experimental, firmware/identity guarded utilities derived from a different reference TV. They are not part of routine app installation. Do not run them or change Home/startup assignments without a separate, explicit owner request, a target-specific review and a recovery plan.
+The native-Home helper scripts are experimental, firmware/identity guarded utilities for specific test environments. They are not portable setup steps or part of routine app installation. Do not run them or change Home/startup assignments without a separate, explicit owner request, a target-specific review and a recovery plan.
 
 ## Package and publishing boundaries
 
